@@ -37,7 +37,7 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class MainActivity extends Activity {
+public class MainActivity extends CheckPermissionsActivity {
     QupaiService qupaiService;
     String filePath="";
     String filePName="psjgngsasd.mp4";
@@ -218,7 +218,8 @@ e.printStackTrace();
             if (name != null || birthday != null) {
                 Toast.makeText(getApplicationContext(), "name:" + name + "    birthday:" + birthday, Toast.LENGTH_SHORT).show();
             }
-            filePName = name+"_"+ new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".mp4";
+            filePName = name;
+            //filePName = name+"_"+ new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".mp4";
 
             //new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
         }
