@@ -1,11 +1,15 @@
 package com.example.u.myapplication;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.hardware.Camera;
 import android.os.Environment;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import com.alibaba.sdk.android.oss.ClientConfiguration;
@@ -16,6 +20,7 @@ import com.alibaba.sdk.android.oss.ServiceException;
 import com.alibaba.sdk.android.oss.callback.OSSCompletedCallback;
 import com.alibaba.sdk.android.oss.callback.OSSProgressCallback;
 import com.alibaba.sdk.android.oss.common.auth.OSSCredentialProvider;
+import com.alibaba.sdk.android.oss.common.auth.OSSCustomSignerCredentialProvider;
 import com.alibaba.sdk.android.oss.common.auth.OSSPlainTextAKSKCredentialProvider;
 import com.alibaba.sdk.android.oss.internal.OSSAsyncTask;
 import com.alibaba.sdk.android.oss.model.GetObjectRequest;
@@ -30,19 +35,24 @@ import com.duanqu.qupai.engine.session.VideoSessionCreateInfo;
 import com.duanqu.qupai.sdk.android.QupaiManager;
 import com.duanqu.qupai.sdk.android.QupaiService;
 
+import org.json.JSONObject;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 
-public class MainActivity extends CheckPermissionsActivity {
+public class MainActivity extends CheckPermissionsActivity  implements View.OnClickListener{
     QupaiService qupaiService;
     String filePath="";
     String filePName="psjgngsasd.mp4";
     String buketName="jjtcsfb133";
     String imgPath="";
+    private int progress = 0;
+    private ProgressDialog progressDialog;
     public static final int ACTIVITY_RESULT_NUM_UPLOAD_VEDIO = 13;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +66,8 @@ public class MainActivity extends CheckPermissionsActivity {
        initParam();
        // playVideo();
         initIntentParam();
+  //      initProgressBar();
+      //  initOSS();
     }
 
     private void initParam() {
@@ -117,12 +129,14 @@ public class MainActivity extends CheckPermissionsActivity {
          @param requestCode 为避免重复定义requestCode，请开发者自行定义requestCode *
          @param isFirstRecord 是否是第一次调用拍摄 */
         qupaiService.showRecordPage(MainActivity.this,100, true);
+
+
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        System.out.println(requestCode+"aaaaaaaaaaaaaaaaa" +resultCode +"---"+data);
+      //8  System.out.println(requestCode+"aaaaaaaaaaaaaaaaa" +resultCode +"---"+data);
        // System.out.println(" data.getStringExtra() " +  data.getStringExtra("dat"));
         if (data==null){
             setResult(ACTIVITY_RESULT_NUM_UPLOAD_VEDIO);
@@ -133,7 +147,7 @@ public class MainActivity extends CheckPermissionsActivity {
             //得到视频地址，和缩略图地址的数组，返回十张缩略图
             String videoFile = result.getPath();
             String [] thum = result.getThumbnail();
-            System.out.println("视频路径:" + videoFile + "图片路径:" + thum[0] + "Duration" +result.getDuration());
+//            System.out.println("视频路径:" + videoFile + "图片路径:" + thum[0] + "Duration" +result.getDuration());
             filePath =  videoFile;
             imgPath =  thum[0];
             CopyFileUtil.copyFile(imgPath,Environment.getExternalStorageDirectory().toString() + "/Aichuxing/Bus/temp/videotemp/vImg.jpg",true);
@@ -149,11 +163,34 @@ e.printStackTrace();
         }
 
     }
-
     private void initOSS(){
-        String endpoint = "http://oss-cn-shanghai.aliyuncs.com";
 // 明文设置secret的方式建议只在测试时使用，更多鉴权模式请参考后面的访问控制章节
-        OSSCredentialProvider credentialProvider = new OSSPlainTextAKSKCredentialProvider("LTAISMJwL6Ztwzwn", "Cby6lyA7d4GAVyyhqgGPoAvLRiiGTT");
+        String endpoint = "http://oss-cn-shanghai.aliyuncs.com";
+        OSSCustomSignerCredentialProvider credentialProvider = new OSSCustomSignerCredentialProvider() {
+            @Override
+            public String signContent(String content) {
+                // 您需要在这里依照OSS规定的签名算法，实现加签一串字符内容，并把得到的签名传拼接上AccessKeyId后返回
+                // 一般实现是，将字符内容post到您的业务服务器，然后返回签名
+                // 如果因为某种原因加签失败，描述error信息后，返回nil
+                // 以下是用本地算法进行的演示
+                //return "OSS " + AccessKeyId + ":" + base64(hlmac-sha1(AccessKeySecret, content));
+                //return "OSS AccessKeyId=LTAISMJwL6Ztwzwn&Expires=1490794634&Signature=Rqem1zeAyKTXZ1Oj%2Blo8kjzwjQc%3D";
+                HashMap<String, String> map = new HashMap<String, String>();
+                map.put("_userId", userid);
+                map.put("_userKey", userkey);
+                map.put("content", content);
+                String str = HttpUtils.submitPostData("http://bus.tutuchuxing.com/oss/signature/sign", map, "utf-8");
+                try {
+                    Log.d("jsonStrfanhui    ", "jsonStr  " + str);
+                    JSONObject jsonObject = new JSONObject(str);
+                    content = ((JSONObject) jsonObject.get("data")).get("content").toString();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    Log.d("content fan hui  ", "Exception  ");
+                }
+                return "OSS LTAISMJwL6Ztwzwn:" + content;
+            }
+        };
         ClientConfiguration conf = new ClientConfiguration();
         conf.setConnectionTimeout(15 * 1000); // 连接超时，默认15秒
         conf.setSocketTimeout(15 * 1000); // socket超时，默认15秒
@@ -161,20 +198,53 @@ e.printStackTrace();
         conf.setMaxErrorRetry(2); // 失败后最大重试次数，默认2次
         OSS oss = new OSSClient(getApplicationContext(), endpoint, credentialProvider, conf);
         uploadfile(oss);
-
     }
+
+//    private void initOSS(){
+//        String endpoint = "http://oss-cn-shanghai.aliyuncs.com";
+//// 明文设置secret的方式建议只在测试时使用，更多鉴权模式请参考后面的访问控制章节
+//        OSSCredentialProvider credentialProvider = new OSSPlainTextAKSKCredentialProvider("LTAISMJwL6Ztwzwn", "Cby6lyA7d4GAVyyhqgGPoAvLRiiGTT");
+//        ClientConfiguration conf = new ClientConfiguration();
+//        conf.setConnectionTimeout(15 * 1000); // 连接超时，默认15秒
+//        conf.setSocketTimeout(15 * 1000); // socket超时，默认15秒
+//        conf.setMaxConcurrentRequest(5); // 最大并发请求书，默认5个
+//        conf.setMaxErrorRetry(2); // 失败后最大重试次数，默认2次
+//        OSS oss = new OSSClient(getApplicationContext(), endpoint, credentialProvider, conf);
+//
+//        uploadfile(oss);
+//
+//    }
     private void uploadfile(final OSS oss){
+
+       // filePName="asdasdasdasd.mp4";
+        filePath= Environment.getExternalStorageDirectory().toString() + "/a.mp4";
         // 构造上传请求
         PutObjectRequest put = new PutObjectRequest(buketName, filePName, filePath);
         //System.out.println("filePath "+ filePath);
         // 异步上传时可以设置进度回调
+        //zyDownloading.startDownload();
+
+//        if (!zyDownloading.isDownloading()) {
+//            progress = 0;
+//            zyDownloading.startDownload();
+//        //    handler.sendMessageDelayed(Message.obtain(), 15000);
+//        }
+//       handler.sendEmptyMessageDelayed(1,  1500);
+
          put.setProgressCallback(new OSSProgressCallback<PutObjectRequest>() {
             @Override
             public void onProgress(PutObjectRequest request, long currentSize, long totalSize) {
+
+              //  Log.d("PutObject1--",(float)(currentSize/totalSize*100)+"currentSize: " +currentSize*1.0/totalSize+ "---" );
+//                progress = (int)((currentSize*1.0/totalSize)*100);
+//                handler.sendEmptyMessageDelayed(3,1600);
+              //  zyDownloading.setProgress(progress);
+                Log.d("PutObject", progress+"currentSize: " + currentSize + " totalSize: " + totalSize);
+
               //      Log.d("PutObject", "currentSize: " + currentSize + " totalSize: " + totalSize);
             }
         });
-
+     //   zyDownloading.startDownload();
         OSSAsyncTask task = oss.asyncPutObject(put, new OSSCompletedCallback<PutObjectRequest, PutObjectResult>() {
             @Override
             public void onSuccess(PutObjectRequest request, PutObjectResult result) {
@@ -183,8 +253,8 @@ e.printStackTrace();
                 Intent intent = new Intent();
                 intent.putExtra("imgPath",imgPath);
                 intent.putExtra("videoUrl","http://jjtcsfb133.oss-cn-shanghai.aliyuncs.com/"+filePName);
-                System.out.println(imgPath+"传递之前   "+filePName);
-                setResult(ACTIVITY_RESULT_NUM_UPLOAD_VEDIO,intent);
+                System.out.println(imgPath+"传递之前   "+filePName +"result "+result.toString());
+//                setResult(ACTIVITY_RESULT_NUM_UPLOAD_VEDIO,intent);
                 finish();
             }
 
@@ -208,21 +278,29 @@ e.printStackTrace();
             }
         });
     }
-
+    private String userkey="";
+     private String userid="";
     private void initIntentParam(){
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
         if (bundle != null) {
             String name = bundle.getString("name");
             String birthday = bundle.getString("birthday");
+            userkey  = bundle.getString("userkey");
+            userid  = bundle.getString("userid");
             if (name != null || birthday != null) {
-                Toast.makeText(getApplicationContext(), "name:" + name + "    birthday:" + birthday, Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), name+"--name:" + userkey + "    birthday:" + userid, Toast.LENGTH_SHORT).show();
             }
             filePName = name;
             //filePName = name+"_"+ new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".mp4";
-
             //new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+
         }
+        progressDialog = new ProgressDialog(this);
+        // String stri = getResources().getString(R.string.Is_sending_a_request);
+        progressDialog.setMessage("急速上传中");
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.show();
     }
 
 
@@ -230,6 +308,8 @@ e.printStackTrace();
 
 
     private void download(OSS oss){
+
+
         GetObjectRequest get = new GetObjectRequest(buketName, filePName);
         OSSAsyncTask task = oss.asyncGetObject(get, new OSSCompletedCallback<GetObjectRequest, GetObjectResult>() {
             @Override
@@ -238,8 +318,6 @@ e.printStackTrace();
                 InputStream inputStream = result.getObjectContent();
                 OutputStream outputStream = null;
                 try {
-                    ;
-
 //                    File saveFile=new File( Environment.getExternalStorageDirectory()+"/zhzhg.mp4");
 //                    if (!saveFile.exists()){
 //                        saveFile.createNewFile();
@@ -299,9 +377,54 @@ private void playVideo(){
 //    videoView.requestFocus();
 }
 
+private void initProgressBar(){
+
+   handler.sendEmptyMessageDelayed(2,1500);
+
+
+//    if (!zyDownloading.isDownloading()) {
+//        progress = 0;
+//        zyDownloading.startDownload();
+//        handler.sendMessageDelayed(Message.obtain(), 1500);
+//    }
+
+}
+    private Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what){
+                case  0:
+
+                    break;
+                case 1:
+
+                    break;
+                case 2:
+                    initOSS();
+                    break;
+                case 3:
+
+                    break;
+                default:
+            }
+
+
+            super.handleMessage(msg);
+        }
+    };
+
+    @Override
+    public void onClick(View v) {
+//        switch (v.getId()) {
+//            case R.id.activity_main:
+//
+//                break;
+//        }
+    }
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
        // System.out.println("aaaaaaaaaaaaaa");
     }
 }
