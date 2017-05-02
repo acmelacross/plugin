@@ -129,8 +129,6 @@ public class MainActivity extends CheckPermissionsActivity  implements View.OnCl
          @param requestCode 为避免重复定义requestCode，请开发者自行定义requestCode *
          @param isFirstRecord 是否是第一次调用拍摄 */
         qupaiService.showRecordPage(MainActivity.this,100, true);
-
-
     }
 
     @Override
@@ -156,12 +154,10 @@ public class MainActivity extends CheckPermissionsActivity  implements View.OnCl
 //                // 这里跟Activity传递参数一样的嘛，不要担心怎么传递参数，还有接收参数也是跟Activity和Activity传参数一样
 //             startActivity(intent);
    // setResult(100);
-
             initOSS();
         }catch (Exception e){
 e.printStackTrace();
         }
-
     }
     private void initOSS(){
 // 明文设置secret的方式建议只在测试时使用，更多鉴权模式请参考后面的访问控制章节
@@ -215,7 +211,6 @@ e.printStackTrace();
 //
 //    }
     private void uploadfile(final OSS oss){
-
        // filePName="asdasdasdasd.mp4";
         filePath= Environment.getExternalStorageDirectory().toString() + "/a.mp4";
         // 构造上传请求
@@ -288,9 +283,9 @@ e.printStackTrace();
             String birthday = bundle.getString("birthday");
             userkey  = bundle.getString("userkey");
             userid  = bundle.getString("userid");
-            if (name != null || birthday != null) {
-                Toast.makeText(getApplicationContext(), name+"--name:" + userkey + "    birthday:" + userid, Toast.LENGTH_SHORT).show();
-            }
+//            if (name != null || birthday != null) {
+//                Toast.makeText(getApplicationContext(), name+"--name:" + userkey + "    birthday:" + userid, Toast.LENGTH_SHORT).show();
+//            }
             filePName = name;
             //filePName = name+"_"+ new SimpleDateFormat("yyyyMMddHHmmss").format(new Date())+".mp4";
             //new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
