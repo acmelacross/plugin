@@ -145,10 +145,10 @@ public class MainActivity extends CheckPermissionsActivity  implements View.OnCl
             //得到视频地址，和缩略图地址的数组，返回十张缩略图
             String videoFile = result.getPath();
             String [] thum = result.getThumbnail();
-//            System.out.println("视频路径:" + videoFile + "图片路径:" + thum[0] + "Duration" +result.getDuration());
+            System.out.println("视频路径:" + videoFile + "图片路径:" + thum[0] + "Duration" +result.getDuration());
             filePath =  videoFile;
             imgPath =  thum[0];
-            CopyFileUtil.copyFile(imgPath,Environment.getExternalStorageDirectory().toString() + "/Aichuxing/Bus/temp/videotemp/vImg.jpg",true);
+            CopyFileUtil.copyFile(imgPath,Environment.getExternalStorageDirectory().toString() + "/Aichuxing/Bus/temp/videotemp/"+imgTempName,true);
 //            Intent intent = getPackageManager().getLaunchIntentForPackage("com.tutuchuxing");
 //        // 这里如果intent为空，就说名没有安装要跳转的应用嘛
 //                // 这里跟Activity传递参数一样的嘛，不要担心怎么传递参数，还有接收参数也是跟Activity和Activity传参数一样
@@ -212,7 +212,7 @@ e.printStackTrace();
 //    }
     private void uploadfile(final OSS oss){
        // filePName="asdasdasdasd.mp4";
-        filePath= Environment.getExternalStorageDirectory().toString() + "/a.mp4";
+       // filePath= Environment.getExternalStorageDirectory().toString() + "/a.mp4";
         // 构造上传请求
         PutObjectRequest put = new PutObjectRequest(buketName, filePName, filePath);
         //System.out.println("filePath "+ filePath);
@@ -275,12 +275,13 @@ e.printStackTrace();
     }
     private String userkey="";
      private String userid="";
+    public static String imgTempName="";
     private void initIntentParam(){
         Intent intent = getIntent();
         Bundle bundle = intent.getExtras();
         if (bundle != null) {
             String name = bundle.getString("name");
-            String birthday = bundle.getString("birthday");
+             imgTempName = bundle.getString("imgTempName");
             userkey  = bundle.getString("userkey");
             userid  = bundle.getString("userid");
 //            if (name != null || birthday != null) {
